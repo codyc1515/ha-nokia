@@ -1,0 +1,11 @@
+{
+  "domain": "nokia",
+  "name": "Nokia FastMile",
+  "codeowners": [],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/codyc1515/ha-nokia",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/codyc1515/ha-nokia/issues",
+  "version": "0.1.0"
+}

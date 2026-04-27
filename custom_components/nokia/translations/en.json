@@ -1,0 +1,154 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Nokia FastMile",
+        "description": "Connect to a Nokia FastMile gateway.",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "username": "Username",
+          "password": "Password",
+          "use_ssl": "Use HTTPS"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect",
+      "invalid_auth": "Invalid authentication"
+    },
+    "abort": {
+      "already_configured": "This gateway is already configured"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "roaming": {
+        "name": "Roaming"
+      },
+      "technology": {
+        "name": "Technology"
+      },
+      "tac": {
+        "name": "TAC"
+      },
+      "bytes_sent": {
+        "name": "Bytes sent"
+      },
+      "bytes_received": {
+        "name": "Bytes received"
+      },
+      "imei": {
+        "name": "IMEI"
+      },
+      "sim_type": {
+        "name": "SIM type"
+      },
+      "sim_status": {
+        "name": "SIM status"
+      },
+      "imsi": {
+        "name": "IMSI"
+      },
+      "iccid": {
+        "name": "ICCID"
+      },
+      "msisdn": {
+        "name": "MSISDN"
+      },
+      "friendly_name": {
+        "name": "Friendly name"
+      },
+      "root_mac_address": {
+        "name": "Root MAC address"
+      },
+      "ip_address": {
+        "name": "IP address"
+      },
+      "lot_number": {
+        "name": "Lot number"
+      },
+      "cpu_usage": {
+        "name": "CPU usage"
+      },
+      "memory_total": {
+        "name": "Memory total"
+      },
+      "memory_free": {
+        "name": "Memory free"
+      },
+      "4g_enb": {
+        "name": "4G eNB"
+      },
+      "4g_cell": {
+        "name": "4G Cell"
+      },
+      "4g_snr": {
+        "name": "4G SNR"
+      },
+      "4g_rsrp": {
+        "name": "4G RSRP"
+      },
+      "4g_rsrq": {
+        "name": "4G RSRQ"
+      },
+      "4g_rssi": {
+        "name": "4G RSSI"
+      },
+      "4g_band": {
+        "name": "4G Band"
+      },
+      "4g_bandwidth": {
+        "name": "4G Bandwidth"
+      },
+      "4g_pci": {
+        "name": "4G PCI"
+      },
+      "4g_earfcn": {
+        "name": "4G EARFCN"
+      },
+      "4g_carrier": {
+        "name": "4G Carrier"
+      },
+      "4g_power": {
+        "name": "4G Power"
+      },
+      "4g_cqi": {
+        "name": "4G CQI"
+      },
+      "4g_nsa": {
+        "name": "4G NSA"
+      },
+      "5g_cell": {
+        "name": "5G Cell"
+      },
+      "5g_snr": {
+        "name": "5G SNR"
+      },
+      "5g_rsrp": {
+        "name": "5G RSRP"
+      },
+      "5g_rsrq": {
+        "name": "5G RSRQ"
+      },
+      "5g_band": {
+        "name": "5G Band"
+      },
+      "5g_bandwidth": {
+        "name": "5G Bandwidth"
+      },
+      "5g_pci": {
+        "name": "5G PCI"
+      },
+      "5g_earfcn": {
+        "name": "5G EARFCN"
+      },
+      "5g_carrier": {
+        "name": "5G Carrier"
+      },
+      "5g_cqi": {
+        "name": "5G CQI"
+      }
+    }
+  }
+}
