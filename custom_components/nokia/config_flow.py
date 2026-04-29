@@ -13,7 +13,18 @@ from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import NokiaFastMileClient, NokiaFastMileError, async_validate_credentials
-from .const import CONF_USE_SSL, DEFAULT_HOST, DEFAULT_PORT, DEFAULT_USERNAME, DOMAIN
+from .const import (
+    CONF_USE_SSL,
+    CONF_UNIFI_EMULATION_ENABLED,
+    CONF_UNIFI_INFORM_HOST,
+    CONF_UNIFI_INFORM_PORT,
+    DEFAULT_HOST,
+    DEFAULT_PORT,
+    DEFAULT_USERNAME,
+    DEFAULT_UNIFI_INFORM_HOST,
+    DEFAULT_UNIFI_INFORM_PORT,
+    DOMAIN,
+)
 
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
@@ -23,8 +34,32 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
         vol.Required(CONF_USERNAME, default=DEFAULT_USERNAME): str,
         vol.Required(CONF_PASSWORD): str,
         vol.Required(CONF_USE_SSL, default=False): bool,
+        vol.Optional(CONF_UNIFI_EMULATION_ENABLED, default=False): bool,
+        vol.Optional(CONF_UNIFI_INFORM_HOST, default=DEFAULT_UNIFI_INFORM_HOST): str,
+        vol.Optional(CONF_UNIFI_INFORM_PORT, default=DEFAULT_UNIFI_INFORM_PORT): int,
     }
 )
+
+
+def _options_schema(entry: config_entries.ConfigEntry) -> vol.Schema:
+    """Return the options form schema."""
+    data = {**entry.data, **entry.options}
+    return vol.Schema(
+        {
+            vol.Optional(
+                CONF_UNIFI_EMULATION_ENABLED,
+                default=data.get(CONF_UNIFI_EMULATION_ENABLED, False),
+            ): bool,
+            vol.Optional(
+                CONF_UNIFI_INFORM_HOST,
+                default=data.get(CONF_UNIFI_INFORM_HOST, DEFAULT_UNIFI_INFORM_HOST),
+            ): str,
+            vol.Optional(
+                CONF_UNIFI_INFORM_PORT,
+                default=data.get(CONF_UNIFI_INFORM_PORT, DEFAULT_UNIFI_INFORM_PORT),
+            ): int,
+        }
+    )
 
 
 async def _validate_input(
@@ -51,6 +86,13 @@ class NokiaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
 
+    @staticmethod
+    def async_get_options_flow(
+        config_entry: config_entries.ConfigEntry,
+    ) -> config_entries.OptionsFlow:
+        """Return the options flow."""
+        return NokiaOptionsFlow(config_entry)
+
     async def async_step_user(
         self,
         user_input: dict[str, Any] | None = None,
@@ -74,4 +116,25 @@ class NokiaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=STEP_USER_DATA_SCHEMA,
             errors=errors,
+        )
+
+
+class NokiaOptionsFlow(config_entries.OptionsFlow):
+    """Handle Nokia FastMile options."""
+
+    def __init__(self, entry: config_entries.ConfigEntry) -> None:
+        """Initialize options flow."""
+        self._entry = entry
+
+    async def async_step_init(
+        self,
+        user_input: dict[str, Any] | None = None,
+    ) -> config_entries.ConfigFlowResult:
+        """Manage options."""
+        if user_input is not None:
+            return self.async_create_entry(title="", data=user_input)
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=_options_schema(self._entry),
         )
