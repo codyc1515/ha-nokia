@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+import math
+import re
 from typing import Any
 
 from homeassistant.components.sensor import (
@@ -101,6 +103,41 @@ def _bool_text(value: Any) -> str | None:
     if value is None or value == "":
         return None
     return "true" if bool(value) else "false"
+
+
+SENTINEL_VALUES = {
+    -32768,
+    32768,
+    65535,
+    2147483647,
+    4294967295,
+}
+
+
+def _maybe_number(value: Any) -> float | int | None:
+    """Parse raw gateway values into a numeric type when possible."""
+    if value is None or value == "":
+        return None
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, (int, float)):
+        return value
+
+    text = str(value).strip().replace(",", "")
+    if not text or not re.fullmatch(r"[+-]?\d+(?:\.\d+)?", text):
+        return None
+
+    number = float(text)
+    if number.is_integer():
+        return int(number)
+    return number
+
+
+def _is_sentinel_value(value: float | int) -> bool:
+    """Detect common modem sentinel/error values."""
+    if isinstance(value, float) and not value.is_integer():
+        return False
+    return int(value) in SENTINEL_VALUES
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -407,7 +444,23 @@ class NokiaSensor(CoordinatorEntity[NokiaDataUpdateCoordinator], SensorEntity):
         value = self.entity_description.value_fn(self.coordinator.data)
         if value == "":
             return None
-        return value
+        return self._sanitise_value(value)
+
+    def _sanitise_value(self, value: Any) -> Any:
+        """Apply guardrails for malformed/sentinel/extreme gateway values."""
+        key = self.entity_description.key
+        number = _maybe_number(value)
+
+        if number is None:
+            return value
+
+        if isinstance(number, float) and (math.isnan(number) or math.isinf(number)):
+            return None
+
+        if _is_sentinel_value(number):
+            return None
+
+        return number
 
     @property
     def _serial_number(self) -> str:
