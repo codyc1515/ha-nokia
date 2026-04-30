@@ -17,7 +17,7 @@ from homeassistant.components.sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfInformation
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -96,13 +96,6 @@ def _web_nested_device(data: dict[str, Any], group: str, key: str) -> Any:
     if isinstance(value, dict):
         return value.get(key)
     return None
-
-
-def _bool_text(value: Any) -> str | None:
-    """Return a lower-case true/false string for boolean gateway values."""
-    if value is None or value == "":
-        return None
-    return "true" if bool(value) else "false"
 
 
 SENTINEL_VALUES = {
@@ -223,11 +216,6 @@ WEB_DEVICE_SENSORS: tuple[NokiaSensorEntityDescription, ...] = (
         value_fn=lambda data: _web_device(data, "X_ASB_COM_FriendlyName"),
     ),
     NokiaSensorEntityDescription(
-        key="root_mac_address",
-        translation_key="root_mac_address",
-        value_fn=lambda data: _web_device(data, "RootMacAddress"),
-    ),
-    NokiaSensorEntityDescription(
         key="ip_address",
         translation_key="ip_address",
         value_fn=lambda data: _web_device(data, "IPAddress"),
@@ -341,11 +329,6 @@ RADIO_SENSORS: tuple[NokiaSensorEntityDescription, ...] = (
         translation_key="cqi",
         value_fn=lambda data: _lte(data, "Cw0CQI"),
     ),
-    NokiaSensorEntityDescription(
-        key="nsa",
-        translation_key="nsa",
-        value_fn=lambda data: _bool_text(_lte(data, "NRCellAssociated")),
-    ),
 )
 
 
@@ -358,11 +341,14 @@ NR_OVERRIDES: dict[str, Callable[[dict[str, Any]], Any]] = {
     "bandwidth": lambda data: _nr(data, "Bandwidth"),
     "pci": lambda data: _nr(data, "AttachedCellPci"),
     "earfcn": lambda data: _nr(data, "AttachedCellNRArfcn"),
-    "carrier": lambda data: _nr(data, "PLMNName"),
     "cqi": lambda data: _nr(data, "Cw0CQI"),
 }
 
-NR_UNSUPPORTED_KEYS = {"enb", "rssi", "power", "nsa"}
+NR_UNSUPPORTED_KEYS = {"enb", "rssi", "power", "carrier"}
+CONDITIONALLY_EXPOSED_SENSORS = {
+    (None, "msisdn"),
+    ("5G", "cell"),
+}
 
 
 async def async_setup_entry(
@@ -378,10 +364,10 @@ async def async_setup_entry(
         for description in GENERIC_SENSORS
     ]
 
-    entities.extend(
-        NokiaSensor(coordinator, description, None)
-        for description in STATISTICS_SENSORS
-    )
+    for description in STATISTICS_SENSORS:
+        if not _should_expose_sensor(coordinator.data, description, None):
+            continue
+        entities.append(NokiaSensor(coordinator, description, None))
 
     entities.extend(
         NokiaSensor(coordinator, description, None)
@@ -393,22 +379,20 @@ async def async_setup_entry(
         for description in RADIO_SENSORS
     )
 
-    entities.extend(
-        NokiaSensor(
-            coordinator,
-            NokiaSensorEntityDescription(
-                key=description.key,
-                translation_key=description.translation_key,
-                device_class=description.device_class,
-                native_unit_of_measurement=description.native_unit_of_measurement,
-                state_class=description.state_class,
-                value_fn=NR_OVERRIDES[description.key],
-            ),
-            "5G",
+    for description in RADIO_SENSORS:
+        if description.key in NR_UNSUPPORTED_KEYS:
+            continue
+        nr_description = NokiaSensorEntityDescription(
+            key=description.key,
+            translation_key=description.translation_key,
+            device_class=description.device_class,
+            native_unit_of_measurement=description.native_unit_of_measurement,
+            state_class=description.state_class,
+            value_fn=NR_OVERRIDES[description.key],
         )
-        for description in RADIO_SENSORS
-        if description.key not in NR_UNSUPPORTED_KEYS
-    )
+        if not _should_expose_sensor(coordinator.data, nr_description, "5G"):
+            continue
+        entities.append(NokiaSensor(coordinator, nr_description, "5G"))
 
     async_add_entities(entities)
 
@@ -475,8 +459,15 @@ class NokiaSensor(CoordinatorEntity[NokiaDataUpdateCoordinator], SensorEntity):
         """Return device registry information."""
         device_status = _device_status(self.coordinator.data)
         web_device_status = _web_device_status(self.coordinator.data)
+        root_mac_address = str(web_device_status.get("RootMacAddress") or "").strip()
+        connections = (
+            {(CONNECTION_NETWORK_MAC, root_mac_address)}
+            if root_mac_address
+            else None
+        )
         return DeviceInfo(
             identifiers={(DOMAIN, self._serial_number)},
+            connections=connections,
             manufacturer=MANUFACTURER,
             model=str(
                 web_device_status.get("ModelName")
@@ -495,3 +486,15 @@ class NokiaSensor(CoordinatorEntity[NokiaDataUpdateCoordinator], SensorEntity):
                 or ""
             ),
         )
+
+
+def _should_expose_sensor(
+    data: dict[str, Any],
+    description: NokiaSensorEntityDescription,
+    prefix: str | None,
+) -> bool:
+    """Return whether this sensor should be created."""
+    if (prefix, description.key) not in CONDITIONALLY_EXPOSED_SENSORS:
+        return True
+    value = description.value_fn(data)
+    return value not in (None, "")

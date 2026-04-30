@@ -59,9 +59,6 @@
       "friendly_name": {
         "name": "Friendly name"
       },
-      "root_mac_address": {
-        "name": "Root MAC address"
-      },
       "ip_address": {
         "name": "IP address"
       },
@@ -108,16 +105,13 @@
         "name": "4G EARFCN"
       },
       "4g_carrier": {
-        "name": "4G Carrier"
+        "name": "Carrier"
       },
       "4g_power": {
         "name": "4G Power"
       },
       "4g_cqi": {
         "name": "4G CQI"
-      },
-      "4g_nsa": {
-        "name": "4G NSA"
       },
       "5g_cell": {
         "name": "5G Cell"
@@ -143,11 +137,13 @@
       "5g_earfcn": {
         "name": "5G EARFCN"
       },
-      "5g_carrier": {
-        "name": "5G Carrier"
-      },
       "5g_cqi": {
         "name": "5G CQI"
+      }
+    },
+    "binary_sensor": {
+      "5g_nsa": {
+        "name": "5G NSA"
       }
     }
   }

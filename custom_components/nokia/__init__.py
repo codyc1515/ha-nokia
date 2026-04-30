@@ -23,7 +23,7 @@ from .const import (
 )
 from .unifi import UniFiInformEmulator, UniFiInformError
 
-PLATFORMS: list[Platform] = [Platform.SENSOR]
+PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR]
 LOGGER = logging.getLogger(__name__)
 UNIFI_STORAGE_VERSION = 1
 
