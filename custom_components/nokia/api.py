@@ -210,19 +210,13 @@ class NokiaFastMileClient:
         web_device_status: dict[str, Any] = {}
         statistics_status: dict[str, Any] = {}
         try:
-            if not self._web_sid:
-                await self.async_web_login()
             LOGGER.debug("Fetching Nokia FastMile web device status")
-            web_device_status = await self._request(
-                "GET",
-                "device_status_web_app.cgi?getroot",
-                headers=self._web_headers,
+            web_device_status = await self._request_protected_web(
+                "GET", "device_status_web_app.cgi?getroot"
             )
             LOGGER.debug("Fetching Nokia FastMile web statistics status")
-            statistics_status = await self._request(
-                "GET",
-                "fastmile_statistics_status_web_app.cgi",
-                headers=self._web_headers,
+            statistics_status = await self._request_protected_web(
+                "GET", "fastmile_statistics_status_web_app.cgi"
             )
         except NokiaFastMileAuthError:
             LOGGER.debug("Nokia FastMile web session expired during status fetch")
@@ -236,6 +230,41 @@ class NokiaFastMileClient:
             "web_device_status": web_device_status,
             "statistics_status": statistics_status,
         }
+
+    async def _request_protected_web(
+        self, method: str, path: str, *, data: dict[str, str] | None = None
+    ) -> dict[str, Any]:
+        """Login before and logout after every protected web endpoint request."""
+        await self.async_web_login()
+        try:
+            return await self._request(
+                method,
+                path,
+                data=data,
+                headers=self._web_headers,
+            )
+        finally:
+            await self.async_web_logout()
+
+    async def async_web_logout(self) -> None:
+        """Log out of the web UI session."""
+        if not self._web_sid:
+            return
+        try:
+            logout_data = await self._request(
+                "GET",
+                "login_web_app.cgi?out",
+                headers=self._web_headers,
+                auth=False,
+            )
+            if logout_data.get("result") != 0 or logout_data.get("reason") != 0:
+                LOGGER.debug(
+                    "Nokia FastMile web logout returned unexpected payload: %s",
+                    logout_data,
+                )
+        finally:
+            self._web_sid = None
+            self._web_token = None
 
     async def _request(
         self,
